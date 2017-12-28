@@ -1,5 +1,6 @@
 import React from 'react';
-const data = require('./lib/Departures.csv');
+// const data = require('./lib/Departures.csv');
+const axios = require('axios');
 
 class Board extends React.Component{
   constructor(props){
@@ -8,12 +9,19 @@ class Board extends React.Component{
       arrivals: [],
       departures: [],
       tick: 0,
-      clock: new Date()
+      clock: new Date(),
+      data: ''
     };
     this.parser = this.parser.bind(this);
     this.sorter = this.sorter.bind(this);
     this.clockTime = this.clockTime.bind(this);
     this.boardHeader = this.boardHeader.bind(this);
+    this.axiosCall = this.axiosCall.bind(this);
+  }
+
+  ticker(){
+    this.setState({tick: this.state.tick + 1});
+    // console.log(this.state.tick);
   }
 
   boardHeader(){
@@ -22,10 +30,12 @@ class Board extends React.Component{
     var date = time.getDate();
     var day = time.getDay();
     var year = time.getFullYear();
-    var clock = this.clockTime(time);
+    var clock = this.clockTime(new Date());
     var hours = clock[0];
     var minutes = clock[1];
     var ampm = clock[2];
+    var seconds = clock[3];
+    // console.log(seconds);
 
     return(
       <div className='boardheader'>
@@ -46,6 +56,7 @@ class Board extends React.Component{
     var clock = new Date(x);
     var hour = clock.getHours();
     var minutes = clock.getMinutes();
+    var seconds = clock.getSeconds();
     // console.log(clock.getHours(),clock.getMinutes())
     if(minutes < 10){
       minutes = `0${minutes}`;
@@ -60,7 +71,7 @@ class Board extends React.Component{
       ampm = 'am';
     }
     return(
-      [hour, minutes, ampm]
+      [hour, minutes, ampm, seconds]
     );
   }
 
@@ -95,7 +106,7 @@ class Board extends React.Component{
   parser(){
     var arrivals = [];
     var departures = [];
-    data.forEach(trip => {
+    Array.from(this.state.data).forEach(trip => {
       if(this.props.location.toLowerCase() !== trip.Origin.toLowerCase()){
         arrivals.push(trip);
       }else{
@@ -154,8 +165,25 @@ class Board extends React.Component{
 
   }
 
+
+  axiosCall(){
+    axios.get('/api/board').then((resp)=>{
+    // console.log('hitting');
+    this.setState({data: resp.data}, () => this.parser());
+
+    });
+  }
+
   componentDidMount(){
-    this.parser();
+    this.axiosCall();
+
+    window.setInterval(function () {
+      this.ticker();
+    }.bind(this), 1000);
+
+    window.setInterval(function(){
+      this.axiosCall();
+    }.bind(this),1000);
   }
 
   render(){
